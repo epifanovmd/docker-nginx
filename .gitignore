@@ -1,0 +1,17 @@
+.idea
+local.properties
+*.iml
+.vscode/
+
+node_modules/
+db-teamcity/
+pgadmin/
+teamcity/
+postgres/
+npm-debug.log
+yarn-error.log
+
+buck-out/
+\.buckd/
+*.keystore
+!debug.keystore
