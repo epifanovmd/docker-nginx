@@ -22,7 +22,7 @@ server {
     server_name wireguard.${NGINX_HOST};
 
     location / {
-        proxy_pass http://${NGINX_LOCALHOST}:4173;
+        proxy_pass http://${NGINX_LOCALHOST}:3001;
     }
 }
 
