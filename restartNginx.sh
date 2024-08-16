@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker restart proxy-server_container
+docker restart nginx_container
