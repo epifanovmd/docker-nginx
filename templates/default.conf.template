@@ -17,6 +17,15 @@ server {
     }
 }
 
+server {
+    listen ${NGINX_PORT};
+    server_name wireguard.${NGINX_HOST};
+
+    location / {
+        proxy_pass http://${NGINX_LOCALHOST}:4173;
+    }
+}
+
 # server {
 #     listen ${NGINX_PORT};
 #     server_name auto-sale.${NGINX_HOST};
