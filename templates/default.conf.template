@@ -1,5 +1,6 @@
 # Включаем все конфиги из директории conf.d
 include /etc/nginx/conf.d/dockers/*.conf;
+include /etc/nginx/conf.d/services/*.conf;
 
 server {
     listen ${NGINX_PORT} default_server;
