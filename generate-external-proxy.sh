@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Функция для отображения справки
+show_help() {
+    echo "Usage: $0 <service_name> <ip_address> <port>"
+    echo ""
+    echo "Аргументы:"
+    echo "  <service_name>   Имя сервиса"
+    echo "  <ip_address>     IP-адрес внешнего сервиса"
+    echo "  <port>           Порт внешнего сервиса"
+    echo ""
+    echo "Опции:"
+    echo "  --help           Показать эту справку и выйти"
+}
+
+# Проверка наличия аргументов
+if [ "$#" -ne 3 ]; then
+  if [ "$1" == "--help" ]; then
+    show_help
+    exit 0
+  else
+    echo "Ошибка: Неверное количество аргументов"
+    show_help
+    exit 1
+  fi
+fi
+
+SERVICE_NAME=$1
+IP_ADDRESS=$2
+PORT=$3
+
+# Загрузка переменных из .env файла
+if [ ! -f .env ]; then
+    echo "Error: .env file not found"
+    exit 1
+fi
+
+source .env
+
+# Проверка наличия переменной NGINX_HOST
+if [ -z "$NGINX_HOST" ]; then
+    echo "Ошибка: переменная NGINX_HOST не установлена в файле .env"
+    exit 1
+fi
+
+# Определение пути к конфигурационным файлам Nginx и имени контейнера Nginx
+NGINX_CONF_DIR="./conf.d/services"
+NGINX_CONTAINER_NAME="nginx"
+
+# Создание директории services, если она не существует
+mkdir -p $NGINX_CONF_DIR
+
+# Создание нового конфигурационного файла Nginx в указанной директории
+NEW_NGINX_CONF="$NGINX_CONF_DIR/$SERVICE_NAME.conf"
+
+cat <<EOF > $NEW_NGINX_CONF
+server {
+    listen 80;
+    server_name $SERVICE_NAME.$NGINX_HOST;
+
+    location / {
+        proxy_pass http://$IP_ADDRESS:$PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+# Вызов скрипта для перезапуска Nginx
+./restart_nginx.sh $NGINX_CONTAINER_NAME
