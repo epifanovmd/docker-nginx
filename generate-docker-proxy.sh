@@ -12,7 +12,7 @@ show_help() {
 }
 
 # Проверка наличия аргументов
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 1 ]; then
   if [ "$1" == "--help" ]; then
     show_help
     exit 0
