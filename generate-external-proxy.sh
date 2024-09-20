@@ -2,19 +2,20 @@
 
 # Функция для отображения справки
 show_help() {
-    echo "Usage: $0 <service_name> <ip_address> <port>"
+    echo "Usage: $0 <service_name> <ip_address> <port> [location]"
     echo ""
     echo "Аргументы:"
     echo "  <service_name>   Имя сервиса"
     echo "  <ip_address>     IP-адрес внешнего сервиса"
     echo "  <port>           Порт внешнего сервиса"
+    echo "  [location]       Необязательный путь (по умолчанию '/')"
     echo ""
     echo "Опции:"
     echo "  --help           Показать эту справку и выйти"
 }
 
 # Проверка наличия аргументов
-if [ "$#" -ne 3 ]; then
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
   if [ "$1" == "--help" ]; then
     show_help
     exit 0
@@ -28,10 +29,11 @@ fi
 SERVICE_NAME=$1
 IP_ADDRESS=$2
 PORT=$3
+LOCATION=${4:-/} # Устанавливаем значение по умолчанию для location
 
 # Загрузка переменных из .env файла
 if [ ! -f .env ]; then
-    echo "Error: .env file not found"
+    echo "Ошибка: .env файл не найден"
     exit 1
 fi
 
@@ -58,7 +60,7 @@ server {
     listen 80;
     server_name $SERVICE_NAME.$NGINX_HOST;
 
-    location / {
+    location $LOCATION {
         proxy_pass http://$IP_ADDRESS:$PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
