@@ -2,12 +2,12 @@
 
 # Функция для отображения справки
 show_help() {
-    echo "Usage: $0 <service_name> <ip_address> <port> [location]"
+    echo "Usage: $0 <service_name> <ip_address> <port1,port2,...> [location]"
     echo ""
     echo "Аргументы:"
     echo "  <service_name>   Имя сервиса"
     echo "  <ip_address>     IP-адрес внешнего сервиса"
-    echo "  <port>           Порт внешнего сервиса"
+    echo "  <ports>          Список портов через запятую (например, 80,443)"
     echo "  [location]       Необязательный путь (по умолчанию '/')"
     echo ""
     echo "Опции:"
@@ -28,7 +28,7 @@ fi
 
 SERVICE_NAME=$1
 IP_ADDRESS=$2
-PORT=$3
+PORTS=$3
 LOCATION=${4:-/} # Устанавливаем значение по умолчанию для location
 
 # Загрузка переменных из .env файла
@@ -55,13 +55,28 @@ mkdir -p $NGINX_CONF_DIR
 # Создание нового конфигурационного файла Nginx в указанной директории
 NEW_NGINX_CONF="$NGINX_CONF_DIR/$SERVICE_NAME.conf"
 
+# Разделяем порты на массив
+IFS=',' read -r -a PORT_ARRAY <<< "$PORTS"
+
 cat <<EOF > $NEW_NGINX_CONF
+upstream $SERVICE_NAME {
+EOF
+
+for PORT in "${PORT_ARRAY[@]}"; do
+cat <<EOF >> $NEW_NGINX_CONF
+    server $IP_ADDRESS:$PORT;
+EOF
+done
+
+cat <<EOF >> $NEW_NGINX_CONF
+}
+
 server {
     listen 80;
     server_name $SERVICE_NAME.$NGINX_HOST;
 
     location $LOCATION {
-        proxy_pass http://$IP_ADDRESS:$PORT;
+        proxy_pass http://$SERVICE_NAME;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
