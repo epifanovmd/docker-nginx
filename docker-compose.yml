@@ -1,14 +1,17 @@
 services:
   nginx:
     container_name: nginx
-    image: nginx
+    image: nginx:latest
+    entrypoint: ["/docker-entrypoint.sh"]
     user: root
     volumes:
+      - ./docker-entrypoint.sh:/docker-entrypoint.sh
       - ./html:/var/www/html
       - ./templates:/etc/nginx/templates
-      - /var/lib/docker/volumes/files/_data:/opt/files
+      - ./conf.d:/etc/nginx/conf.d
+      - ./files:/var/www/files
     network_mode: host
     env_file: .env
 
 volumes:
-  proxy:
+  nginx:
