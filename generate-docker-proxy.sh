@@ -46,11 +46,11 @@ NGINX_CONTAINER_NAME="nginx"
 # Создание директории dockers, если она не существует
 mkdir -p $NGINX_CONF_DIR
 
-# Получение первого порта хоста, к которому привязан любой порт контейнера с использованием awk и sed
-HOST_PORT=$(docker inspect $CONTAINER_NAME | awk '/"HostPort"/ {gsub(/"/, "", $2); print $2}' | head -n 1)
+# Получение всех портов хоста, к которым привязан любой порт контейнера с использованием awk
+HOST_PORTS=($(docker inspect $CONTAINER_NAME | awk -F'[:,]' '/HostPort/ {gsub(/"/, "", $2); print $2}' | sort -u))
 
-if [ -z "$HOST_PORT" ];then
-    echo "Ошибка: не удалось найти сопоставление порта для контейнера $CONTAINER_NAME"
+if [ -z "$HOST_PORTS" ];then
+    echo "Ошибка: не удалось найти сопоставление портов для контейнера $CONTAINER_NAME"
     exit 1
 fi
 
@@ -58,12 +58,24 @@ fi
 NEW_NGINX_CONF="$NGINX_CONF_DIR/$CONTAINER_NAME.conf"
 
 cat <<EOF > $NEW_NGINX_CONF
+upstream $CONTAINER_NAME {
+EOF
+
+for PORT in "${HOST_PORTS[@]}"; do
+cat <<EOF >> $NEW_NGINX_CONF
+    server $NGINX_LOCALHOST:$PORT;
+EOF
+done
+
+cat <<EOF >> $NEW_NGINX_CONF
+}
+
 server {
     listen 80;
     server_name $CONTAINER_NAME.$NGINX_HOST;
 
     location / {
-        proxy_pass http://$NGINX_LOCALHOST:$HOST_PORT;
+        proxy_pass http://$CONTAINER_NAME;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
