@@ -1,19 +1,14 @@
 # Параметры для подключения по SSH
 SSH_USER=root
 SSH_HOST=147.45.245.104
-PROJECT_DIR=development/docker-nginx
+
+.PHONY: remove-container docker-compose-up clone copy deploy clean status logs restart-container update-images backup
 
 # Параметры репозитория
 BRANCH=main
 
-# Локальная директория проекта
-LOCAL_PROJECT_DIR=.
-
 # Имя контейнера (или сервиса в docker-compose.yml)
 CONTAINER_NAME=nginx
-
-# Получение URL репозитория
-REPO_URL=$(shell git config --get remote.origin.url)
 
 # Цель по умолчанию
 all: deploy
@@ -24,28 +19,36 @@ USE_SSH=$(filter ssh,$(MAKECMDGOALS))
 # Префикс для команд (локально или по SSH)
 CMD_PREFIX=$(if $(USE_SSH),ssh $(SSH_USER)@$(SSH_HOST),)
 
-# Правило для клонирования репозитория
-clone:
-	$(CMD_PREFIX) git clone -b $(BRANCH) $(REPO_URL) $(PROJECT_DIR) || (cd $(PROJECT_DIR) && git pull origin $(BRANCH))
+# Локальная директория проекта
+LOCAL_PROJECT_DIR=.
 
-# Правило для копирования проекта из текущей папки
-copy:
-	rsync -avz --delete --exclude-from='.gitignore' $(LOCAL_PROJECT_DIR)/ $(SSH_USER)@$(SSH_HOST):$(PROJECT_DIR)
+# Директория проекта только для SSH
+SSH_PROJECT_DIR=development/docker-nginx
 
-# Правило для остановки и удаления запущенного контейнера
-remove-container:
-	$(CMD_PREFIX) if [ $$(docker ps -q -f name=$(CONTAINER_NAME)) ]; then docker rm -f $(CONTAINER_NAME); fi
-
-# Правило для запуска Docker Compose
-docker-compose-up:
-	$(CMD_PREFIX) cd $(PROJECT_DIR) && docker compose up --no-deps --build --force-recreate
+# Директория проекта (локально или по SSH)
+PROJECT_DIR=$(if $(USE_SSH),$(SSH_PROJECT_DIR),$(LOCAL_PROJECT_DIR))
 
 # Комплексное правило для деплоя
 deploy: copy remove-container docker-compose-up
 
-# Очистка проекта на удаленном сервере
+# Очистка проекта на удаленном сервере (всегда по SSH)
 clean:
-	$(CMD_PREFIX) rm -rf $(PROJECT_DIR)
+	ssh $(SSH_USER)@$(SSH_HOST) rm -rf $(SSH_PROJECT_DIR)
+
+# Правило для копирования проекта из текущей папки
+copy:
+	ssh $(SSH_USER)@$(SSH_HOST) 'mkdir -p $(SSH_PROJECT_DIR)' && \
+	rsync -avz --delete --exclude-from='.gitignore' $(LOCAL_PROJECT_DIR)/ $(SSH_USER)@$(SSH_HOST):$(SSH_PROJECT_DIR)
+
+# Правило для остановки и удаления запущенного контейнера
+remove-container:
+	@if [ "$$($(CMD_PREFIX) docker ps -f name=wireguard-web -q -a)" != "" ]; then \
+		$(CMD_PREFIX) docker rm --force $$($(CMD_PREFIX) docker ps -f name=wireguard-web -q -a); \
+	fi
+
+# Правило для запуска Docker Compose
+docker-compose-up:
+	$(if $(USE_SSH),$(CMD_PREFIX) 'cd $(PROJECT_DIR) && docker compose up --no-deps --build --force-recreate',docker compose up --no-deps --build --force-recreate)
 
 # Проверка состояния контейнеров
 status:
@@ -58,10 +61,6 @@ logs:
 # Перезапуск контейнера
 restart-container:
 	$(CMD_PREFIX) docker restart $(CONTAINER_NAME)
-
-# Обновление всех образов Docker
-update-images:
-	$(CMD_PREFIX) docker pull $(REPO_URL)
 
 # Создание резервной копии проекта
 backup:
