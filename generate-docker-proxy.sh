@@ -7,6 +7,7 @@ show_help() {
     echo "Аргументы:"
     echo "  <container_name>  Имя контейнера Docker"
     echo "  <ports>           Порты через запятую (например, 80,443)"
+    echo "  [location]       Необязательный путь (по умолчанию '/')"
     echo ""
     echo "Опции:"
     echo "  --help            Показать эту справку и выйти"
@@ -26,6 +27,7 @@ fi
 
 CONTAINER_NAME=$1
 IFS=',' read -r -a PORTS <<< "$2"
+LOCATION=${4:-/} # Устанавливаем значение по умолчанию для location
 
 # Загрузка переменных из .env файла
 if [ ! -f .env ]; then
@@ -86,7 +88,7 @@ server {
     listen 80;
     server_name $CONTAINER_NAME.$NGINX_HOST;
 
-    location / {
+    location $LOCATION {
         proxy_pass http://$CONTAINER_NAME;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
