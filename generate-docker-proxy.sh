@@ -2,17 +2,18 @@
 
 # Функция для отображения справки
 show_help() {
-    echo "Usage: $0 <container_name>"
+    echo "Usage: $0 <container_name> <ports>"
     echo ""
     echo "Аргументы:"
     echo "  <container_name>  Имя контейнера Docker"
+    echo "  <ports>           Порты через запятую (например, 80,443)"
     echo ""
     echo "Опции:"
-    echo "  --help           Показать эту справку и выйти"
+    echo "  --help            Показать эту справку и выйти"
 }
 
 # Проверка наличия аргументов
-if [ "$#" -ne 1 ]; then
+if [ "$#" -ne 2 ]; then
   if [ "$1" == "--help" ]; then
     show_help
     exit 0
@@ -24,6 +25,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 CONTAINER_NAME=$1
+IFS=',' read -r -a PORTS <<< "$2"
 
 # Загрузка переменных из .env файла
 if [ ! -f .env ]; then
@@ -49,8 +51,18 @@ mkdir -p $NGINX_CONF_DIR
 # Получение всех портов хоста, к которым привязан любой порт контейнера с использованием awk
 HOST_PORTS=($(docker inspect $CONTAINER_NAME | awk -F'[:,]' '/HostPort/ {gsub(/"/, "", $2); print $2}' | sort -u))
 
-if [ -z "$HOST_PORTS" ];then
-    echo "Ошибка: не удалось найти сопоставление портов для контейнера $CONTAINER_NAME"
+# Проверка, что указанные порты присутствуют в сопоставлениях портов контейнера
+MATCHED_PORTS=()
+for PORT in "${PORTS[@]}"; do
+  if [[ " ${HOST_PORTS[*]} " == *" $PORT "* ]]; then
+    MATCHED_PORTS+=("$PORT")
+  else
+    echo "Предупреждение: Порт $PORT не найден в сопоставлениях портов контейнера $CONTAINER_NAME"
+  fi
+done
+
+if [ ${#MATCHED_PORTS[@]} -eq 0 ]; then
+    echo "Ошибка: Не удалось найти сопоставление указанных портов для контейнера $CONTAINER_NAME"
     exit 1
 fi
 
@@ -61,7 +73,7 @@ cat <<EOF > $NEW_NGINX_CONF
 upstream $CONTAINER_NAME {
 EOF
 
-for PORT in "${HOST_PORTS[@]}"; do
+for PORT in "${MATCHED_PORTS[@]}"; do
 cat <<EOF >> $NEW_NGINX_CONF
     server $NGINX_LOCALHOST:$PORT;
 EOF
