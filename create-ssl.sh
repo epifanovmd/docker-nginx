@@ -38,7 +38,7 @@ keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment  
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = localhost
+DNS.1 = ${DOMAIN}
 EOL
 # Создаем файл конфигурации расширений для сертификата
 
