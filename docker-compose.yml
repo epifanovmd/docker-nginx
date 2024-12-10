@@ -10,8 +10,16 @@ services:
       - ./templates:/etc/nginx/templates
       - ./conf.d:/etc/nginx/conf.d
       - ./files:/var/www/files
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     network_mode: host
     env_file: .env
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
 
 volumes:
   nginx:
