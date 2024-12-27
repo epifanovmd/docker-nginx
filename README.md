@@ -21,7 +21,6 @@ sudo apt-get install docker-compose
 ssh-keygen -t rsa -b 4096 -C "ssh-comment" -f ssh_name
 ssh-copy-id -i ~/.ssh/ssh_name.pub root@147.45.133.109  
 ```
-
 - ### На стороне сервера
 
 sudo nano /etc/ssh/sshd_config
