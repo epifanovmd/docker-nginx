@@ -6,13 +6,14 @@ DOMAINS=("force-dev.ru" "wireguard.force-dev.ru")
 EMAIL="epifanovmd@gmail.com"
 SERVICE_NAME="nginx"
 CRON_FILE="/tmp/cronjob"
+PROJECT_DIR="/root/development/docker-nginx/" # Путь к директории с docker-compose.yml
 
 # Флаг успешного создания сертификата
 SUCCESS=false
 
 # Создаём и обновляем сертификаты для каждого домена
 for DOMAIN in "${DOMAINS[@]}"; do
-  docker compose run --rm certbot certonly --webroot -w $WEBROOT_PATH -d $DOMAIN --email $EMAIL --force-renewal
+  cd $PROJECT_DIR && docker compose run --rm certbot certonly --webroot -w $WEBROOT_PATH -d $DOMAIN --email $EMAIL --force-renewal
   if [ $? -eq 0 ]; then
     SUCCESS=true
   fi
@@ -21,7 +22,7 @@ done
 # Если хотя бы один сертификат успешно создан
 if [ "$SUCCESS" = true ]; then
   # Команда для автоматического обновления и перезапуска сервиса
-  RENEW_COMMAND="docker compose run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker compose restart $SERVICE_NAME"
+  RENEW_COMMAND="cd $PROJECT_DIR && docker compose run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker compose restart $SERVICE_NAME"
 
   # Добавляем текущее содержимое crontab в файл
   crontab -l > $CRON_FILE 2>/dev/null
