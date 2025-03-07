@@ -2,34 +2,46 @@
 
 # Функция для отображения справки
 show_help() {
-    echo "Usage: $0 <service_name> <ip_address> <port1,port2,...> [location]"
+    echo "Usage: $0 --service=<service_name> --ip=<ip_address> --ports=<port1,port2,...> [--location=<location>]"
     echo ""
     echo "Аргументы:"
-    echo "  <service_name>   Имя сервиса"
-    echo "  <ip_address>     IP-адрес внешнего сервиса"
-    echo "  <ports>          Список портов через запятую (например, 80,443)"
-    echo "  [location]       Необязательный путь (по умолчанию '/')"
+    echo "  --service=<service_name>  Имя сервиса"
+    echo "  --ip=<ip_address>         IP-адрес внешнего сервиса"
+    echo "  --ports=<ports>           Список портов через запятую (например, 80,443)"
+    echo "  --location=<location>     Необязательный путь (по умолчанию '/')"
     echo ""
     echo "Опции:"
-    echo "  --help           Показать эту справку и выйти"
+    echo "  --help                   Показать эту справку и выйти"
 }
 
-# Проверка наличия аргументов
-if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
-  if [ "$1" == "--help" ]; then
+# Проверка аргументов
+if [[ "$1" == "--help" ]]; then
     show_help
     exit 0
-  else
-    echo "Ошибка: Неверное количество аргументов"
-    show_help
-    exit 1
-  fi
 fi
 
-SERVICE_NAME=$1
-IP_ADDRESS=$2
-PORTS=$3
-LOCATION=${4:-/} # Устанавливаем значение по умолчанию для location
+# Инициализация переменных
+SERVICE_NAME=""
+IP_ADDRESS=""
+PORTS=""
+LOCATION="/"
+
+# Разбор аргументов
+for arg in "$@"; do
+    case $arg in
+        --service=*) SERVICE_NAME="${arg#*=}" ;;
+        --ip=*) IP_ADDRESS="${arg#*=}" ;;
+        --ports=*) PORTS="${arg#*=}" ;;
+        --location=*) LOCATION="${arg#*=}" ;;
+    esac
+done
+
+# Проверка обязательных параметров
+if [[ -z "$SERVICE_NAME" || -z "$IP_ADDRESS" || -z "$PORTS" ]]; then
+    echo "Ошибка: Параметры --service, --ip и --ports обязательны"
+    show_help
+    exit 1
+fi
 
 # Загрузка переменных из .env файла
 if [ ! -f .env ]; then
@@ -50,7 +62,7 @@ NGINX_CONF_DIR="./conf.d/services"
 NGINX_CONTAINER_NAME="nginx"
 
 # Создание директории services, если она не существует
-mkdir -p $NGINX_CONF_DIR
+mkdir -p "$NGINX_CONF_DIR"
 
 # Создание нового конфигурационного файла Nginx в указанной директории
 NEW_NGINX_CONF="$NGINX_CONF_DIR/$SERVICE_NAME.conf"
@@ -58,17 +70,17 @@ NEW_NGINX_CONF="$NGINX_CONF_DIR/$SERVICE_NAME.conf"
 # Разделяем порты на массив
 IFS=',' read -r -a PORT_ARRAY <<< "$PORTS"
 
-cat <<EOF > $NEW_NGINX_CONF
+cat <<EOF > "$NEW_NGINX_CONF"
 upstream $SERVICE_NAME {
 EOF
 
 for PORT in "${PORT_ARRAY[@]}"; do
-cat <<EOF >> $NEW_NGINX_CONF
+cat <<EOF >> "$NEW_NGINX_CONF"
     server $IP_ADDRESS:$PORT;
 EOF
 done
 
-cat <<EOF >> $NEW_NGINX_CONF
+cat <<EOF >> "$NEW_NGINX_CONF"
 }
 
 server {
@@ -86,4 +98,4 @@ server {
 EOF
 
 # Вызов скрипта для перезапуска Nginx
-./restart_nginx.sh $NGINX_CONTAINER_NAME
+./restart_nginx.sh "$NGINX_CONTAINER_NAME"

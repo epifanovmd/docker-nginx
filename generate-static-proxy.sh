@@ -2,55 +2,35 @@
 
 # Функция для отображения справки
 show_help() {
-  echo "Использование: $0 <location_path> [<static_dir>]"
-  echo ""
-  echo "Аргументы:"
-  echo "  <location_path>    Путь расположения для конфигурации Nginx"
-  echo "  <static_dir>       (Необязательно) Путь к статическому каталогу"
+  echo "Использование: $0 --location=<location_path> --static-dir=<static_dir>"
   echo ""
   echo "Опции:"
-  echo "  --help             Показать это сообщение и выйти"
+  echo "  --location=<location_path>  Путь расположения для конфигурации Nginx (по умолчанию '/files')"
+  echo "  --static-dir=<static_dir>   Путь к статическому каталогу (обязательно)"
+  echo "  --help                      Показать это сообщение и выйти"
 }
 
-# Проверка наличия аргументов
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-  if [ "$1" == "--help" ]; then
-    show_help
-    exit 0
-  else
-    echo "Ошибка: Неверное количество аргументов"
-    show_help
-    exit 1
-  fi
-fi
+# Значения по умолчанию
+LOCATION_PATH="/files"
+STATIC_DIR=""
 
-LOCATION_PATH=$1
-STATIC_DIR=$2
+# Разбор аргументов
+for arg in "$@"; do
+  case $arg in
+    --location=*) LOCATION_PATH="${arg#*=}" ;;
+    --static-dir=*) STATIC_DIR="${arg#*=}" ;;
+    --help) show_help; exit 0 ;;
+  esac
+done
 
-# Загрузка переменных из .env файла
-if [ ! -f .env ]; then
-  echo "Ошибка: файл .env не найден"
-  exit 1
-fi
-
-source .env
-
-# Проверка наличия переменных NGINX_HOST и NGINX_PORT
-if [ -z "$NGINX_HOST" ] || [ -z "$NGINX_PORT" ]; then
-  echo "Ошибка: переменные NGINX_HOST или NGINX_PORT не установлены в файле .env"
-  exit 1
-fi
-
-# Если STATIC_DIR не передан, берем его из .env
+# Проверка обязательного параметра STATIC_DIR
 if [ -z "$STATIC_DIR" ]; then
-  if [ -z "$DEFAULT_STATIC_DIR" ]; then
-    echo "Ошибка: переменная DEFAULT_STATIC_DIR не установлена в файле .env и аргумент static_dir не передан"
-    exit 1
-  fi
-  STATIC_DIR=$DEFAULT_STATIC_DIR
+  echo "Ошибка: Параметр --static-dir обязателен"
+  show_help
+  exit 1
 fi
 
-# Определение пути к конфигурационному файлу Nginx и имени контейнера Nginx
+# Определение пути к конфигурационному файлу Nginx
 NGINX_CONF_FILE="./conf.d/default.conf"
 NGINX_CONTAINER_NAME="nginx"
 
@@ -67,12 +47,13 @@ fi
 # Создание временного файла для нового конфигурационного файла
 TEMP_CONF_FILE=$(mktemp)
 
-# Вставка нового location блока в конец блока server с проверкой на пустую строку
+# Вставка нового location блока в конец блока server
 awk -v static_dir="$STATIC_DIR" -v location_path="$LOCATION_PATH" '
-/server_name '"$NGINX_HOST"'/ { inside_server = 1 }
+/server {/ { inside_server = 1 }
 inside_server && /^}/ {
     print "    location " location_path " {";
     print "        alias " static_dir ";";
+    print "        autoindex on;";
     print "     }";
     inside_server = 0;
 }
