@@ -22,7 +22,8 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     depends_on:
-      - certbot-nginx
+      certbot-nginx:
+        condition: service_started
     profiles: ["certbot"]
     restart: unless-stopped
 
@@ -41,6 +42,9 @@ services:
       - "80:80"
     command: "/bin/sh -c 'nginx -g \"daemon off;\"'"
     profiles: ["certbot"]
+    depends_on:
+      certbot:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
