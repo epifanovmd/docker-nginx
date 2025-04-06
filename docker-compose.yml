@@ -2,26 +2,43 @@ services:
   nginx:
     container_name: nginx
     image: nginx:latest
-    entrypoint: ["/docker-entrypoint.sh"]
+    entrypoint: ["/nginx-entrypoint.sh"]
     user: root
     volumes:
-      - ./docker-entrypoint.sh:/docker-entrypoint.sh
+      - ./nginx-entrypoint.sh:/nginx-entrypoint.sh
       - ./html:/var/www/html
       - ./templates:/etc/nginx/templates
       - ./conf.d:/etc/nginx/conf.d
       - ./files:/var/www/files
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
       - ./nginx.conf:/etc/nginx/nginx.conf
     network_mode: host
     env_file: .env
+    restart: unless-stopped
 
   certbot:
     image: certbot/certbot
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    profiles: ["manual"]
+    depends_on:
+      - certbot-nginx
+    restart: unless-stopped
+
+  certbot-nginx:
+    image: nginx:latest
+    container_name: certbot-nginx
+    volumes:
+      - ./docker-entrypoint.sh:/docker-entrypoint.sh
+      - ./templates:/etc/nginx/templates
+      - ./conf.d/certbot:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./certbot-nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    command: "/bin/sh -c 'nginx -g \"daemon off;\"'"
+    profiles: ["certbot"]
+    restart: unless-stopped
 
 volumes:
   nginx:

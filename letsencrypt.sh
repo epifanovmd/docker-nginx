@@ -13,7 +13,7 @@ SUCCESS=false
 
 # Создаём и обновляем сертификаты для каждого домена
 for DOMAIN in "${DOMAINS[@]}"; do
-  cd $PROJECT_DIR && docker compose run --rm certbot certonly --webroot -w $WEBROOT_PATH -d $DOMAIN --email $EMAIL --force-renewal
+  cd $PROJECT_DIR && docker compose --profile certbot run --rm certbot certonly --webroot -w $WEBROOT_PATH -d $DOMAIN --email $EMAIL --force-renewal
   if [ $? -eq 0 ]; then
     SUCCESS=true
   fi
@@ -22,7 +22,7 @@ done
 # Если хотя бы один сертификат успешно создан
 if [ "$SUCCESS" = true ]; then
   # Команда для автоматического обновления и перезапуска сервиса
-  RENEW_COMMAND="cd $PROJECT_DIR && docker compose run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker compose restart $SERVICE_NAME"
+  RENEW_COMMAND="cd $PROJECT_DIR && docker compose --profile certbot run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker compose restart $SERVICE_NAME"
 
   # Добавляем текущее содержимое crontab в файл
   crontab -l > $CRON_FILE 2>/dev/null
