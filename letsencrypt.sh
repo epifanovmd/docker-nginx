@@ -33,6 +33,8 @@ done
 
 # Если хотя бы один сертификат успешно создан
 if [ "$SUCCESS" = true ]; then
+  docker stop certbot-nginx
+
   # Перезапускаем сервис nginx для применения новых сертификатов
   echo "Перезапускаем сервис $SERVICE_NAME..."
   cd $PROJECT_DIR && docker compose restart $SERVICE_NAME
