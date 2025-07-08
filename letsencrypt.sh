@@ -40,7 +40,7 @@ if [ "$SUCCESS" = true ]; then
   cd $PROJECT_DIR && docker compose restart $SERVICE_NAME
 
   # Команда для автоматического обновления и перезапуска сервиса
-  RENEW_COMMAND="cd $PROJECT_DIR && docker compose --profile certbot run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker compose restart $SERVICE_NAME"
+  RENEW_COMMAND="cd $PROJECT_DIR && docker stop nginx && docker compose --profile certbot run --rm certbot renew --webroot -w $WEBROOT_PATH --force-renewal && docker stop certbot-nginx && docker compose restart $SERVICE_NAME"
 
   # Добавляем текущее содержимое crontab в файл
   crontab -l > $CRON_FILE 2>/dev/null || touch $CRON_FILE
