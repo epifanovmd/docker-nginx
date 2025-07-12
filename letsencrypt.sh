@@ -22,6 +22,7 @@ SUCCESS=false
 # Создаём и обновляем сертификаты для каждого домена
 for DOMAIN in "${DOMAINS[@]}"; do
   echo "Создаем сертификат для домена: $DOMAIN"
+  docker stop $SERVICE_NAME
   cd $PROJECT_DIR && docker compose --profile certbot run --rm certbot certonly --webroot -w $WEBROOT_PATH -d $DOMAIN --email $EMAIL --force-renewal
   if [ $? -eq 0 ]; then
     SUCCESS=true
