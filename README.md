@@ -46,7 +46,7 @@ $ git clone https://github.com/epifanovmd/docker-nginx.git
 ### Run
 ```sh
 $ cd docker-nginx
-$ docker compose -f compose.yml up --force-recreate -d
+$ bash restart-nginx.sh
 ```
 
 ---
