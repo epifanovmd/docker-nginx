@@ -1,6 +1,7 @@
 .husky
 dist
 build
+certbot
 
 # Operating system files
 .DS_Store
